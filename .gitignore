@@ -31,3 +31,16 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+
+#"2016" folders
+/*/*2016*/
+/*/*/*2016*/
+/*/*/*/*2016*/
+
+#"_" folders
+/*/*_*/
+/*/*/*_*/
+/*/*/*/*_*/
+
+# pdfs
+*.pdf
