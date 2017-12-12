@@ -1,0 +1,264 @@
+---
+title: 'Lecture 28: Multiple regression w/Lion data'
+author: "brouwern@gmail.com"
+date: "December 5, 2016"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r}
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+#Multiple linear regression
+
+* Also known as "multiple regression"
+
+
+
+## Lion data: predicting age from nose coloration
+
+### Preliminaries
+
+Load the data
+```{r}
+lions <- read.csv("lion_age_by_pop.csv" )
+```
+
+<br>
+
+There are 2 populations, The main Serengeti population and the Ngorogoro crater (sub?) population
+```{r}
+summary(lions)
+```
+
+<br>
+In the book they consider _all_ of the data combined and ignore the two separate populations (which are operate geographically and genetically)
+
+<br>
+Does the relationship between age and nose-blackness work the same for both populations?
+
+<br>
+
+### Plot lion data w/ both populations combined
+
+We will "pool" the data from both populations (that is, ignore population differences)
+
+#### Run regression
+```{r}
+#build regression model
+m.pooled <- lm(age.years ~ portion.black, data = lions)
+```
+
+#### Look at summary of regression
+
+```{r}
+summary(m.pooled)
+```
+
+
+#### Plot pooled data
+```{r}
+
+#plot
+plot(age.years ~ portion.black, data = lions, 
+     cex = 2, lwd = 2,
+     xlim = c(0.0, 0.9),
+     ylim = c(0,14))
+abline(m.pooled, lwd = 3, col = 2)
+
+#To Do: add equations for line
+
+```
+
+
+
+### Plot lion data seperated by population
+
+```{r}
+i.Serengeti <- which(lions$population == "Serengeti")
+i.Ngorogoro <- which(lions$population == "Ngorogoro")
+
+#plot Serengeti
+plot(age.years ~ portion.black, 
+     data = lions,
+     subset = i.Serengeti, 
+     cex = 2, lwd = 2,col = 2,
+     xlim = c(0.0, 0.9),
+     ylim = c(0,14))
+
+
+#plot Serengeti
+points(age.years ~ portion.black, 
+     data = lions,
+     subset = i.Ngorogoro, 
+     cex = 2, lwd = 2,
+     col = 3,pch = 2,
+     xlim = c(0.0, 0.9),
+     ylim = c(0,14))
+
+#add legend
+legend("topleft",
+       legend = c("Serengeti","Ngorogoro"),
+       col = c(2,3),pch = c(1,2),cex = 1.2,
+       )
+```
+
+
+#### What model best describes the data: 1 line or 2?
+
+
+##### Hypothesis 0: there is no relationship
+
+The null hypothesis Ho is that there is no relationship between how black the nose is and age.  We can see that there is a relationship and will skip this Ho.
+
+##### Hypothesis 1: the populations are the same
+
+The data can be modeled with a single regression line.  Any difference between the populations due to random noise.
+
+```{r hypothesis 1a, echo=FALSE}
+library(ggplot2)
+
+qplot(y = age.years,
+      x = portion.black, 
+      data = lions,
+      col = population, 
+      shape = population) +
+  geom_point(size = 5) + theme_bw() +
+  ggtitle("")
+```
+
+
+
+
+```{r hypothesis 1b, echo=FALSE}
+library(ggplot2)
+
+qplot(y = age.years,
+      x = portion.black, 
+      data = lions) + 
+  geom_smooth(method = "lm", se = F, size = 3#,
+              #aes(linetype = population)
+              )+
+  geom_point(size = 5, aes(
+      col = population, 
+      shape = population)) +
+  ggtitle("Hypothesis 1: one line") +
+  theme_bw()
+```
+
+
+
+##### Hypothesis 2: the populations are different
+
+*The populations have different biological/ecological processes going on that make the relationship between age and nose blackness depend on the population
+*We say there is an **INTERACTION** between population and portion.black
+*stated another way: The relationship between nose blackness and age is different between the two populations
+*Therefore, the slope of the lines are different
+*(This include the possibility that there is no relationship in one population (slope = 0) and is a relationship in the other (slope >0) )
+
+
+
+<br><br>
+
+
+```{r hypothesis 1, echo=FALSE}
+library(ggplot2)
+
+qplot(y = age.years,
+      x = portion.black, 
+      data = lions) + 
+  geom_smooth(method = "lm", se = F, size = 3,
+              aes(linetype = population,
+                  col = population)
+              )+
+  geom_point(size = 5, aes(
+      col = population, 
+      shape = population)) +
+  ggtitle("Hypothesis 2: two lines") +
+  theme_bw()
+```
+
+
+
+#### Run multiple regression model
+
+*We indicate in **interaction** in R using the multiple symbol "*"
+```{r hypothesis 2, echo=FALSE}
+
+m.by.pop <- lm(age.years ~ portion.black*population,                 data = lions)
+
+
+```
+
+
+<br>
+
+Look at multiple regression output
+```{r}
+summary(m.by.pop)
+```
+
+
+
+#### Test models 
+
+Compare the model w/1 line vs. the model w/ 2 lines
+
+```{r}
+anova(m.pooled, # data combined (aka "pooled")
+      m.by.pop) # data seperated by population
+```
+
+
+
+
+#### MOre stuff
+
+```{r}
+
+#no relationship
+m.null <- lm(age.years ~ 1,data = lions)
+
+#relationship is the same for both populations
+m.pooled <- lm(age.years ~ portion.black,data = lions)
+
+
+#slope is the same but intercepts are different
+m.by.pop.add <- lm(age.years ~ portion.black + population,data = lions)
+
+
+#slopes AND intercepts are different
+m.by.pop.intnx <- lm(age.years ~ portion.black*population,data = lions)
+
+```
+
+
+
+```{r}
+#relationship is the same for both populations
+summary(m.pooled)
+```
+
+
+
+
+```{r}
+#slope is the same but intercepts are different
+summary(m.by.pop.add)
+```
+
+
+
+```{r}
+#slopes AND intercepts are different
+summary(m.by.pop.intnx)
+```
+

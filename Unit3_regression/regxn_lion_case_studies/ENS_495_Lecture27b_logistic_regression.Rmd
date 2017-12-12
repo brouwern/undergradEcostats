@@ -1,0 +1,496 @@
+---
+title: "Lecture 27b: Logistic regression example"
+author: "brouwern@gmail.com"
+date: "December 2, 2016"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+  word_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = F}
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/reg3_regression_other_week_after_thanksgiving")
+
+source("plotmeans.R")
+```
+
+
+# Logistic regression
+
+** Regression with "binary data" **
+
+## What kinds of things are "Binary"
+
+* **0 / 1**
+* **either / or**
+* **yes / no**
+* **alive / dead**
+* **sick / healthy**
+* **flowered / didn't flower**
+* **eaten by deer / not eaten by deer**
+* **caught something in trap / didn't catch something**
+* **shot a deer/didn't shoot a deer**
+
+In R, you can have binary data coded as 0s and 1s, or two categorical variables, "alive" vs. "dead".
+
+<br><br><br><br>
+
+## Two types of binary data
+
+Depending on how a study was conducted or how an experiment carried out, binary data usually gets collected in one of two ways.
+
+### Binary data type 1: 
+#### (# of "events")/(# of "trials")
+
+Often, a fixed number of things were observed, and a certain number of times something happened.  This data is in the form (# of "events")/(# of "trials")
+
+* (# of seeds germinated) / (# of seeds planted)
+* (# of dead tadpoles) / (# exposed to pesticide)
+* (# of eaten plants) /  (# of plants in forest)
+* (# of deer shot) / (# of hunters in forest)
+
+<br>
+
+#### Requires that the **denominator** is known 
+#### These data are usually easily aggregated in a table
+#### Often used when you have a _categorical_ predictor
+#### Often used for experiments that generate binary data
+
+<br>
+
+#### Comments:
+
+In each case a denominator, the number of trials, can be defined, and the number of events counted.  It can be tempting to just use the counts, but including the number of trials is important.  
+
+A **major assumption** of the models used to analyze binary data is that **each and every trial** and **each and every event that happens** are independent.  Ideally, this means they take place in a separate, isolated location and what happens in one trial does not impact the other trials.  So, if you are looking at seed germination, ideally you would germinate each seed in a separate pot.  If you germinate all of your seeds in a single pot, they are not independent.  If you are assessing the toxicity of a pesticide on an insect, each insect would be exposed to the chemical in a separate trial.  If all of your insects are housed in a single container and are all sprayed at the same time, they are not independent.
+
+Several people in class have this kind of data.  In some cases their trials are independent; in others, they are not. 
+
+<br><br><br><br>
+
+### Binary data type 2:
+#### Did an event happen? ~ predictor variable
+
+* Did you shoot a deer? ~ distance from forest edge
+* Did the Trillium flower? ~ size of the plant
+* Was the Trillium eaten? ~ number of deer in forest
+* Did the person get the flu? ~ concentration of vaccine given
+
+<br>
+
+These data are usually hard to aggregate because each "trial"" (a plant that might flower, or that might be eaten) is associated with a unique predictor variable (size of the plant)
+
+<br>
+
+A few people in class might have this kind of data.  Shows up often in field studies.
+
+<br><br><br><br>
+
+
+## Binary data Example 1: (# of "events")/(# of "trials")
+
+<br>
+
+### Experiment: effect of cold exposure on fish
+
+Whitlock & Shulter logistic regression example page 568
+
+```{r}
+## Load data from page 568
+
+### Original data has a sample size of 40
+df1.n40 <- data.frame(died.YN = c(11,24,29,38),
+                  lived.YN = c(29,16,11,2),
+                  exposure.min = c(3,8,12,18))
+
+df1.n40$total.fish <- df1.n40$died.YN +df1.n40$lived.YN
+
+#reduce same size to 20
+#make change to data for illustration purposes
+df1.n20 <- df1.n40
+df1.n20$died.YN <- round(df1.n20$died.YN/2,0)
+df1.n20$lived.YN <- round(df1.n20$lived.YN/2,0)
+df1.n20$total.fish <- df1.n20$died.YN +df1.n20$lived.YN
+
+
+```
+
+<br><br><br><br>
+
+
+### Look at dataframe
+
+```{r}
+df1.n20
+```
+
+## Common way to think about binary data: percentages
+
+* Binary data often converted to percentage 
+* Divide # of events by # of trials
+* This can cause problems
+
+<br><br>
+
+Calculate percentage mortality for fish data
+```{r}
+percent.died <- df1.n20$died.YN/df1.n20$total.fish
+
+df1.n20 <- cbind(percent.died, df1.n20)
+```
+
+<br><br>
+
+Look at new percentage data
+```{r}
+df1.n20
+```
+
+<br><br><br><br>
+
+
+## The problem with percentages from binary data
+
+### Problem 1: they hid the sample size
+
+* What if I said "50% of people who stand in front of a microwave while warming up their coffee get cancer, and I have data to prove it."
+* What would be a key feature of this study? ... Sample size!
+* What if my data had n = 2?   (1 got cancer)
+* What if my data had n = 100? (50 got cancer)
+* Both data have caner rate = 50%
+* Which dataset is more reliable?
+
+<br><br><br><br>
+
+### Problem 2: people who use them often incorrectly calcualte confidence intervals (CIs)
+
+#### Model percent.died vs. exposure to cold
+
+
+Use standard regression w/ lm()
+```{r}
+lm.percent <- lm(percent.died ~ exposure.min, 
+                 data = df1.n20)
+
+```
+
+<br><br><br><br>
+
+#### Look at model output
+
+
+Use summary(...)
+```{r}
+summary(lm.percent)
+```
+
+<br>
+
+* As exposure time increase, the percentage of fish that die increases.
+* What number tells you this?
+
+<br><br><br><br>
+
+
+#### Plot the  data
+
+
+```{r}
+newdat <- data.frame(exposure.min = 3:20)
+ci.out <- predict(lm.percent,
+                  interval = "confidence",
+                  newdata = newdat)
+```
+
+<br><br><br><br>
+
+#### Plot the data with confidence intervals
+```{r}
+par(mfrow = c(1,1))
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+```
+
+Ok, as exposure to cold increases, mortality increase
+
+<br><br><br><br>
+
+#### Plot the percentage data w/ the regression line
+
+```{r}
+par(mfrow = c(1,1))
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+abline(lm.percent, col = 2, lwd = 2)
+```
+
+Nice regression line showing trend
+
+<br><br><br>
+
+#### Plot the data w/regression line &  95% CI
+
+```{r}
+par(mfrow = c(1,1))
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+abline(lm.percent, col = 2, lwd = 2)
+points(ci.out[,"lwr"] ~ newdat$exposure.min, 
+       type = "l")
+points(ci.out[,"upr"] ~ newdat$exposure.min, type = "l")
+
+```
+
+Fancy confidence interval around trend.  Nice, but...
+
+<br><br><br><br>
+
+#### Plot the data w/regression line, 95% CI, and refernece line for percent.died = 1
+
+```{r}
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+abline(lm.percent, col = 2, lwd = 2)
+points(ci.out[,"lwr"] ~ newdat$exposure.min, 
+       type = "l")
+points(ci.out[,"upr"] ~ newdat$exposure.min, type = "l")
+abline(h = 1, col = 2, lwd = 2, lty = 2)
+```
+
+* What does it mean the the confidence interval crosses 1.0?
+* Subtle point: if your model can make confidence intervals for data points that don't make sense, something is wrong with the model!
+
+
+<br><br><br>
+
+## Correct analysis of binary data
+
+### A correct analysis uses a model that 
+#### 1)Includes information on the sample size
+#### 2)Properly models the binary nature of the data
+
+<br>
+
+#### This requires "logistic regression"
+#### This is a type of "generalized linear model"
+
+<br><br>
+
+## Coding a logistic regression GLM
+
+* **uses R's glm() function**
+* **requires a statement of the "family" of the model**
+* **here family = "binomial"**
+* **Also need to indicate sample size (n)**
+* **use "weights = " argument**
+* **here, weights = total.fish**
+
+
+<br><br><br><br>
+
+## Code to run the logistic regression model model
+
+```{r}
+glm1 <- glm(percent.died ~ exposure.min, 
+            data = df1.n20,
+            
+            #model family:
+            family = "binomial",
+            
+            #sample size
+            weights = total.fish)
+```
+
+<br><br><br>
+
+#### Logistic regression GLM output
+
+Use summary() command just as for regular regression
+```{r}
+summary(glm1)
+```
+
+* This looks almost the sames as for regular regression
+* BUT - the "slope" parameter for a GLM only tells you the overall direction of a trend (positive or negative)
+* The slope is on a special "logistic regression" scale
+
+
+<br><br><br>
+
+#### Plot output of model
+
+* Logistic regression output is on a special scale
+* Why this is is beyond this class: it has to do with logs :(
+* R's "predict" function converts from this "special" to a percentage/probability scale
+* This special scale is called the "link" scale
+* The normal scale we can interpret is the "response" scale
+* That is, the scale that the original response variable was measured on
+
+
+Get predictions from our GLM
+```{r}
+#Predictions from GLM
+newdat <- data.frame(exposure.min = 3:20)
+se.outlink <- predict(glm1,
+                  se.fit = T,
+                  type = "link",
+                  newdata = newdat)
+
+library(arm)
+glm.cis <- data.frame(predictions = invlogit(se.outlink$fit),
+                      lwr = invlogit(se.outlink$fit - 1.96*se.outlink$se.fit),
+                      upr = invlogit(se.outlink$fit + 1.96*se.outlink$se.fit))
+
+glm.cis <- cbind(glm.cis,newdat)
+
+```
+
+<br><br><br><br>
+
+#### Plot the output of the GLM: 
+##### Data w/regression line
+
+```{r}
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+points(predictions ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2, lwd = 2)
+```
+
+<br><br><br>
+
+#### Plot the output of the GLM: 
+##### Data, line, confidence intervals
+
+```{r}
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+points(predictions ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2, lwd = 2)
+points(upr ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2)
+points(lwr ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2)
+```
+
+
+
+<br><br><br>
+
+#### Plot the output of the GLM: 
+##### Data, line, CIs, and reference line at 1.0
+
+
+```{r}
+plot(percent.died ~ exposure.min, data = df1.n20, 
+     pch = 18, cex = 2,
+     xlim = c(3, 19),
+     ylim = c(0,1.125))
+points(predictions ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2, lwd = 2)
+points(upr ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2)
+points(lwr ~ exposure.min, 
+       type = "l", data  = glm.cis, col = 2)
+
+abline(h = 1, col = 2, lwd = 2, lty = 2)
+```
+
+
+<br><br><br>
+
+## Binary data Example 1: Did event happen? ~ predictor
+
+### Fish survival ~ fish size
+Say we did this experiment at just the longest exposure time (20 minutes) and want to know what the relationship is between size and mortality?
+
+Make up some data
+```{r}
+size <- seq(10,100,length.out = 50)
+died.YN <- c(1,1,1,1,1,1,1,1,1,1,1,1,
+             1,0,1,1,1,0,0,1,0,1,0,1,
+             1,1,0,0,0,0,1,0,0,0,1,0,
+             1,0,0,1,0,0,0,0,0,1,0,0,
+             0,0)
+
+df3 <- data.frame(died.YN = died.YN, 
+                  size = size)
+
+```
+
+
+#### Plot data
+
+* 1 = died
+* 0 = didn't die (alive)
+* size varies continuously from 5 cm to 100 cm
+```{r}
+plot(died.YN ~ size, data = df3)
+```
+
+
+<br><br><br><br>
+
+#### Model data
+
+* Model with glm()
+* family = binomial
+* DO NOT put anything in for sample size 
+* that is, don't use anything for weight argument
+
+<br>
+```{r}
+glm2 <- glm(died.YN ~ size, data = df3,
+            
+            # family of modle
+            family = "binomial")
+```
+
+
+<br><br><br>
+
+```{r}
+summary(glm2)
+```
+
+* The negative value means that as fish get bigger, the probablity that they die **decreases**
+* As before, these numbers that come from glm() cannot be directly interpreted
+* We can interpret the p-value for the slope as we normally would
+
+
+<br><br><br>
+
+### Plot with regression line
+```{r}
+
+predictions <- predict(glm2,type = "response")
+plot(died.YN ~ size, data = df3)
+lines(predictions ~ df3$size, type = "l", col = 2, lwd = 2)
+
+```
+
+<br><br>
+
+```{r}
+
+```
+

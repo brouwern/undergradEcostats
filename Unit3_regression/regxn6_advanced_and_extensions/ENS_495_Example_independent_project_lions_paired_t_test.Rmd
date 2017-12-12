@@ -1,0 +1,188 @@
+---
+title: "Independent Project: paired t-test example"
+author: "brouwern@gmail.com"
+date: "December 9, 2016"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Updates to this file will be announced via email and on teh course Facebook page https://www.facebook.com/groups/930301587096169/
+
+
+
+# Lion data set as a Paired t-test
+
+To illustrate how to do a full analsis of data with a paired t-test, I take the lion data we've been using, make some changes, simulate some new observations, and turn it into a "repeated measures" study where the same lion has its picture taken twice.  This data can then be analyzed wtih a paired t-test, where the pairs are observation 1 and observation 2 on each lion. 
+
+
+## Preliminaries
+```{r}
+#The following sets up the data for the analysis
+#Set working directory
+
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+Load original lion data
+```{r}
+dat <- read.csv("lion_age_by_pop_and_sex.csv")
+```
+
+
+
+
+## Plot Lion data
+```{r}
+par(mfrow = c(1,1))
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 3 groups",
+     ylim = c(0,19))
+```
+
+<br>
+
+The original study took a single data point from each lion.  I'm going turn this into repeated measures.
+
+
+<br>
+I am going to make up a hypothetical data set where I assume that lions the lions were all photgraphed and pigment quantified in one year and then 5 years later they were located and pigment quantified again.  The hypothesis would be that pigment changes over time.  The null hypothesis is that there is no significant change in pigment over time
+
+<br>
+
+# Make hypothetical repeated measures data
+
+
+Run this code to make the data. 
+
+NOTE: I ignore the fact that this data is bouned by 1 (100% pigmented).  A logit transformation would ideally be applied
+```{r}
+
+mod <- lm(portion.black ~ age.years, data = dat)
+n <- dim(dat)[1]
+slope.se <- 0.00438
+slope.sd <- slope.se*sqrt(n)
+slope <- coef(mod)[2]
+slope.noise <- slope + rnorm(n,mean = 0, sd = slope.sd)
+
+dat$portion.black.5yrs <- dat$portion.black + 5*slope.noise
+
+dat$portion.black.5yrs  <- ifelse(dat$portion.black.5yrs > 1, 0.99999, dat$portion.black.5yrs )
+
+plot(portion.black.5yrs ~ portion.black, data = dat, xlab = "original black pigment",
+     ylab = "black pigment in 5 years")
+
+```
+
+
+# Plot means of each time point
+
+(NOTE: This is a general summary of the data , but plotting the data this way -- esp. w/ confidence intervals! -- can give a very innaccurate impression of what is going on b/c it **ignores the paired nature of the data.**)  Below we'll plot the DIFFERNECES between the time points, which what we are really interested in.  
+
+## Calculate means, sd, and se
+```{r}
+mean.portion.black <- mean(dat$portion.black)
+mean.portion.black.5yrs <- mean(dat$portion.black.5yrs)
+
+
+sd.portion.black <- mean(dat$portion.black)
+sd.portion.black.5yrs <- mean(dat$portion.black.5yrs)
+
+n.portion.black <- length(dat$portion.black)
+n.portion.black.5yrs <- length(dat$portion.black.5yrs)
+
+se.portion.black <- sd.portion.black/sqrt(n.portion.black.5yrs)
+se.portion.black.5yrs <- sd.portion.black.5yrs/sqrt(n.portion.black.5yrs)
+
+
+
+```
+
+<br><br>
+
+Bundle the means and SEs into "vectors"
+
+```{r}
+my.means <- c(mean.portion.black,mean.portion.black.5yrs)
+my.se <- c(se.portion.black,se.portion.black.5yrs)
+```
+
+## Plot means w/ error bars
+
+
+**NOTE** as noted above this plot is just for looking at the data overall but is potentially VERY misleading (esp the error bars).  See section below for plotting the DIFFERENCES between.
+```{r, echo = F}
+source("plot_means_raw_code.R")
+```
+
+```{r}
+plot.means(means = my.means,
+           SEs = my.se,
+           categories = c("Measurement year 1","Measurment year 5"),
+           y.axis.label = "Portion black")
+```
+
+**Figure 2a:** Mean pigmentation of lions during first measuremnet period and 5 years later.  Lions are from the Serengeti and Ngorogoro crater popualtions, Tanzania, east Africa.  Error bars are approximate 95% confidence intervals that assume indepdence of obseravtions..  Note that the same lions occur in both samples.
+
+
+## Plot differences between time oints
+
+
+### Calculate differences
+
+```{r}
+dat$pigment.diffs <- dat$portion.black.5yrs - dat$portion.black
+```
+
+
+### Plot raw differences
+
+```{r}
+boxplot(dat$pigment.diffs)
+```
+
+
+
+### Summary stats of differences
+
+The difference between paired measuremnets is the focus of this study and what we really need to look at.
+
+```{r}
+mean.diff <- mean(dat$pigment.diffs)
+sd.diff <- sd(dat$pigment.diffs)
+n.diff <- length(dat$pigment.diffs)
+se.diff <- sd.diff/sqrt(n.diff)
+
+plot.means(means = mean.diff, SEs = se.diff,categories = "",y.axis.label = "5 year diff. in pigmentation")
+
+abline(h = 0, col = 2)
+```
+
+
+## Paired t-test
+
+```{r}
+t.test(dat$portion.black.5yrs,dat$portion.black, paired = T)
+```
+
+## Write up results
+
+"The portion of individual lion snounts that were pigmented black increased significantly over five years (mean difference = 0.095, t = 4.43, p < 0.00001, df = 92)"
+
+
+
+## Paired t-test diagnostics
+
+Look at whether the differenes are normal-ish distributed
+
+```{r}
+hist(dat$pigment.diffs)
+```
+
+

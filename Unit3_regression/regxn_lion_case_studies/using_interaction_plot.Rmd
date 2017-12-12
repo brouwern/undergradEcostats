@@ -1,0 +1,80 @@
+---
+title: "Plotting how multiple things change over time: spagetti plots"
+author: "brouwern@gmail.com"
+date: "December 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Plotting multiple lines using interaction.plot()
+
+See http://www.ats.ucla.edu/stat/r/faq/spagplot.htm for information
+
+
+## Make data
+```{r}
+
+Week <- c(1:7,1:7)
+Count <- c(32,37,35,31,19,8,28,17,15,17,14,13,22,30)
+Sex <- c(rep("Buck",7),rep("Doe",7))
+
+dat <- data.frame(Week, Count, Sex)
+
+
+
+
+```
+
+
+## plot w/ interaction.plot()
+```{r}
+interaction.plot(dat$Week, dat$Count, trace.factor = dat$Sex)
+
+
+```
+
+
+
+
+
+
+
+<br><br><br><br>
+
+I wrote my own function before I remembered interaction.plot
+
+```{r}
+
+
+plot.multiple.lines <- function(y.var, x.var, group.column, data){
+  levs <- levels(data[[group.column]])
+  
+  n.levs <- length(levs)
+  
+  i.1 <- which(data[group.column] == levs[1])
+  plot(data[i.1,y.var] ~ data[i.1,x.var], type = "b")
+  
+  for(i in 2:length(levs)){
+    i.x <- which(data[group.column] == levs[i])
+    points(data[i.x,y.var] ~ data[i.x,x.var], type = "b", col = i)
+  }
+}
+
+
+
+```
+
+
+<br><br><br>
+# Test the function
+```{r}
+plot.multiple.lines(y.var = "Count", x.var = "Week", group.column = "Sex", data = dat)
+
+
+```
+
+
+

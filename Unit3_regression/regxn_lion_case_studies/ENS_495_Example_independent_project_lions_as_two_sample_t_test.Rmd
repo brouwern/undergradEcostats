@@ -1,0 +1,200 @@
+---
+title: "Independent Project: Diagnostics for 2-sample t-test"
+author: "brouwern@gmail.com"
+date: "December 9, 2016"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Updates to this file will be announced via email and on teh course Facebook page
+https://www.facebook.com/groups/930301587096169/
+
+# Lion data set as 2-sample t-test
+
+Example analysis of the lion data using a two-sample t-test.  
+
+
+## Preliminaries
+```{r}
+#The following sets up the data fzo the analysis
+#Set working directory
+
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+Load data
+```{r}
+dat <- read.csv("lion_age_by_pop_and_sex.csv")
+```
+
+
+
+
+## Plot Lion data
+```{r}
+par(mfrow = c(1,1))
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 3 groups",
+     ylim = c(0,19))
+```
+
+<br>
+
+## Split lion data by groups
+
+Make two groups, low pigmentation and high pigmentation, by converting the numeric pigmentation variable.
+
+```{r}
+par(mfrow = c(1,1))
+pigment.mean <- mean(dat$portion.black)
+
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 2 groups",
+     ylim = c(0,19))
+abline(v = pigment.mean, col = 2, lwd = 3)
+
+text(x = 0.125, y = 17, "Low\npigment", cex =1.1)
+
+text(x = 0.895, y = 17, "High\npigment", cex = 1.1)
+```
+
+
+<br>
+
+## Create Two pigment groups
+```{r}
+pigment.mean <- mean(dat$portion.black)
+
+dat$pigment.groups.2 <- "high.pigment"
+
+dat$pigment.groups.2[which(dat$portion.black <= pigment.mean)] <- "low.pigment"
+
+
+
+dat$pigment.groups.2 <- factor(dat$pigment.groups.2)
+summary(dat)
+
+
+                               
+dat$pigment.groups.2 <- factor(dat$pigment.groups.2,
+                               levels =c("low.pigment",
+                                          "high.pigment"))
+
+
+table(dat$pigment.groups.2, dat$population)    
+table(dat$pigment.groups.2, dat$sex)
+
+
+```
+
+**NOTE:** Splitting up a continous variable like this into a categorical variable and doing an ANOVA is **generally a BAD idea**. Regression is the proper way to analyze the raw data.  I am making these groups for illustration purposes only!
+
+<br><br>
+
+## Plot raw data by pigmentation group
+
+
+```{r}
+par(mfrow = c(1,1))
+plot(age.years ~ pigment.groups.2,data = dat,
+     xlab = "Pigmentation group",
+     ylab = "Known Lion Age")
+```
+
+**Figure 1a:** Boxplots of lion ages in two pigmentation groups from the Serengeti and Ngorogoro Crater, Tanzania, east Africa.
+
+
+## Plot means
+
+
+```{r}
+library(sciplot)
+
+
+ci.fun. <- function(x) c(mean(x)-2*se(x), mean(x)+3*se(x))
+lineplot.CI(x.factor = pigment.groups.2,
+            response = age.years,
+            data = dat,
+            ci.fun = ci.fun.
+              )
+```
+
+**Figure 2a:** Mean age of lions in two pigmentation groups from the Serengeti and Ngorogoro crater, Tanzania, east Africa.  Error bars are approximate 95% confidence intervals.
+
+
+
+## 2-sample t-test
+
+### The Normal way: 2-sample t-test w/ t.test
+
+Test whether the two pigmentation groups have sig. different mean ages.
+```{r}
+t.test(age.years ~ pigment.groups.2, data = dat)
+```
+
+
+### The alternative way: t-test with lm()
+
+You can set up basically the same test/model using the function lm() (though note that Welch's correction for unequal variances won't be applied).  Doing this is a useful way to look at the residuals of the t-test.
+
+#### Fit lm() model
+```{r}
+lm.t.test <- lm(age.years ~ pigment.groups.2, data = dat)
+```
+
+#### Look at diagnostics of the t-test
+
+Get the residuals
+```{r}
+resids <- resid(lm.t.test)
+```
+
+
+Plot diagnostic plots
+```{r}
+par(mfrow = c(2,2))
+hist(resids)
+plot(lm.t.test, which = 2)
+plot(lm.t.test, which = 1)
+plot(lm.t.test, which = 5)
+```
+
+* Normal QQ plot is a little off
+* Residual's vs. fitted indicates some difference in variance between the groups
+
+
+#### Fit lm() model to logged data
+
+Check if log transformation improves thigns
+```{r}
+lm.t.test.log <- lm(log(age.years) ~ pigment.groups.2, data = dat)
+```
+
+#### Look at diagnostics of the t-test
+
+Get the residuals
+```{r}
+resids.log <- resid(lm.t.test.log)
+```
+
+
+Plot diagnostic plots
+```{r}
+par(mfrow = c(2,2))
+hist(resids.log)
+plot(lm.t.test.log, which = 2)
+plot(lm.t.test.log, which = 1)
+plot(lm.t.test.log, which = 5)
+```
+
+
+* QQ is better
+* Residvuals vs. fit is perhaps a little better.

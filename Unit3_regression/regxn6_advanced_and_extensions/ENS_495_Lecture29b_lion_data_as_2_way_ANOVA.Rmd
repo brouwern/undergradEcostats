@@ -1,0 +1,307 @@
+---
+title: "Lecture 29b: (Very) brief into to 2-way ANOVA"
+author: "brouwern@gmail.com"
+date: "December 9, 2016"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lion data set as 2-way ANOVA
+
+
+```{r}
+#The following sets up the data fro the analysis
+#Set working directory
+
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+Load data
+```{r}
+dat <- read.csv("lion_age_by_pop_and_sex.csv")
+```
+
+
+
+
+## Lion data
+```{r}
+
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 3 groups",
+     ylim = c(0,19))
+```
+
+
+## Split lion data by groups
+```{r}
+par(mfrow = c(1,1))
+pigment.mean <- mean(dat$portion.black)
+
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 3 groups",
+     ylim = c(0,19))
+abline(v = pigment.mean, col = 2, lwd = 3)
+
+text(x = 0.125, y = 17, "Low\npigment", cex =1.1)
+
+text(x = 0.895, y = 17, "High\npigment", cex = 1.1)
+```
+
+
+<br>
+
+## Create Two pigment groups
+```{r}
+pigment.mean <- mean(dat$portion.black)
+
+dat$pigment.groups.2 <- "high.pigment"
+
+dat$pigment.groups.2[which(dat$portion.black <= pigment.mean)] <- "low.pigment"
+
+
+
+dat$pigment.groups.2 <- factor(dat$pigment.groups.2)
+summary(dat)
+
+
+                               
+dat$pigment.groups.2 <- factor(dat$pigment.groups.2,
+                               levels =c("low.pigment",
+                                          "high.pigment"))
+
+
+table(dat$pigment.groups.2, dat$population)    
+table(dat$pigment.groups.2, dat$sex)
+
+
+```
+
+**NOTE:** Splitting up a continuous variable like this into a categorical variable and doing an ANOVA is generally a BAD idea. Regression is the proper way to analyze the raw data.  I am making these groups for illustration purposes only!
+
+<br>
+
+## Plot raw data by pigmentation group
+
+
+```{r}
+par(mfrow = c(1,1))
+plot(age.years ~ pigment.groups.2,data = dat,
+     xlab = "Pigmentation group",
+     ylab = "Known Lion Age")
+```
+
+**Figure 1a:** Boxplots of lion ages in two pigmentation groups from the Serengeti and Ngorogoro Crater, Tanzania, east Africa.
+
+
+## Plot raw data by pigmentation group
+
+
+```{r}
+par(mfrow = c(1,1))
+plot(age.years ~ population,data = dat,
+     xlab = "Pigmentation group",
+     ylab = "Known Lion Age")
+```
+
+**Figure 1b:** Boxplots of lion ages in two populations the Serengeti and Ngorogoro Crater, Tanzania, east Africa.
+
+
+<br><br><br>
+
+## Plot means
+
+
+```{r}
+library(sciplot)
+
+
+ci.fun. <- function(x) c(mean(x)-2*se(x), mean(x)+3*se(x))
+lineplot.CI(x.factor = pigment.groups.2,
+            response = age.years,
+            data = dat,
+            ci.fun = ci.fun.
+              )
+```
+
+**Figure 2a:** Mean age of lions in two pigmentation groups from the Serengeti and Ngorogoro crater, Tanzania, east Africa.  Error bars are approximate 95% confidence intervals.
+
+
+
+```{r}
+lineplot.CI(x.factor = population,
+            response = age.years,
+            data = dat,
+            ci.fun = ci.fun.
+              )
+```
+**Figure 2b:** Mean age of lions in two population groups, the Serengeti and Ngorogoro crater, Tanzania, east Africa.  Error bars are approximate 95% confidence intervals.
+
+
+## Calcualte the means of each of the FOUR groups
+
+```{r}
+
+source("plot_means.R")
+#combine group names
+dat$all.four.groups <- paste(dat$population,
+                      dat$pigment.groups.2)
+
+means <- tapply(dat$age.years,
+       dat$all.four.groups,
+       mean)
+
+sds <- tapply(dat$age.years,
+       dat$all.four.groups,
+       sd)
+
+ns <- tapply(dat$age.years,
+       dat$all.four.groups,
+       length)
+
+summary(factor(dat$all.four.groups))
+
+groups <- c("Ngorogoro high",
+            "Ngorogoro low",
+            "Serengeti high",
+            "Serengeti low")
+ses <- sds/sqrt(ns)
+plot.means(means = means,
+           SEs = ses,
+           categories = groups,y.axis.label = "Lion Age")
+
+
+
+```
+
+
+
+
+<br><br>
+
+## Two-way ANOVA
+
+(again, don't do an analysis like this - use the original data and do an ANOVA!)
+
+### Null model: age.years ~ 1
+
+Age does not vary with pigmentation OR pigmentation
+```{r}
+m.null <- lm(age.years ~ 1 ,data = dat)
+```
+
+<br>
+
+### Alternative model 1: age.years ~ pigment.groups.2
+Hypoth:Age *does*  vary with pigmentation
+```{r}
+m.alt.1.pigment <- lm(age.years ~ pigment.groups.2,data = dat)
+```
+
+
+### Alternative model 2: age.years ~ population
+Hypoth:Age varies with population
+```{r}
+m.alt.2.pop <- lm(age.years ~ population,data = dat)
+```
+
+
+
+### Alternative model 3: age.years ~ pigmentation + population
+Hypoth:Age varies with population AND pigmentation
+
+```{r}
+m.alt.3.both <- lm(age.years ~ population +pigment.groups.2,data = dat)
+```
+
+<br>
+
+### Alternative model 4: age.years ~ pigmentation *population (FUll model)
+
+Hypoth:Age varies with population
+```{r}
+m.alt.4.intxn <- lm(age.years ~ population*pigment.groups.2,data = dat)
+
+m.alt.4.mean <- lm(age.years ~ -1+ population:pigment.groups.2,data = dat)
+```
+
+<br><br>
+
+### THe hard way: Omnibus ANOVA F-test on EACH set of models 
+
+
+Null vs. alt.1 (pigmentation groups)
+```{r}
+anova(m.null, m.alt.1.pigment)
+```
+
+<br><br>
+
+Null vs. alt.3 (populations)
+```{r}
+anova(m.alt.1.pigment, m.alt.2.pop)
+```
+
+
+
+Null vs. alt.3 (pigmentation + population)
+```{r}
+anova(m.alt.1.pigment, m.alt.3.both)
+```
+
+
+
+Null vs. alt.4 (pigmentation*population interaction)
+```{r}
+anova(m.alt.3.both, m.alt.4.intxn)
+```
+
+
+
+### The easy way
+
+
+anova() on "interaction" model
+```{r}
+anova(m.alt.4.intxn)
+```
+
+
+
+
+
+
+### Writing up result of Omnibus F-test
+
+*Summarize reulst of ANOVA in a single sentence:*
+"There was a significant difference in the mean ages of the three diffrent pigmentation groups (F = 106.67, p < 0.00001, DF = 92,90)"
+
+<br><br>
+
+## Comparisons using Tukey-HSD
+
+### Refit m.alt w/ aov()
+
+```{r}
+
+dat$pigment.groups.2.rename <- gsub("pigment","",dat$pigment.groups.2)
+
+m.alt.4.inxtn.aov <- aov(age.years ~ pigment.groups.2.rename*population,data = dat)
+```
+
+<br><br>
+
+### Pairwise comparison w/TukeyHSD()
+
+Run TukeyHSD()
+```{r}
+my.tukey.intxn <- TukeyHSD(m.alt.4.inxtn.aov)
+```
+
+<br><br>
+

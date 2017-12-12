@@ -1,0 +1,8 @@
+name: Publish Document
+title:
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/234229/8e3ccbb453b440e8a63bf0257501a439
+bundleId: https://api.rpubs.com/api/v1/document/234229/8e3ccbb453b440e8a63bf0257501a439
+url: http://rpubs.com/brouwern/234229
+when: 1481348662.82755

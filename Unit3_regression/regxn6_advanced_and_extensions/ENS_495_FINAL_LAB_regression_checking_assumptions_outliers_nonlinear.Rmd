@@ -1,0 +1,890 @@
+---
+title: "Final Lab: Regression diagnostics, outliers transformation & x^2 terms"
+author: "brouwern@gmail.com"
+date: "December 5, 2016"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  word_document:
+    toc: yes
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introduction
+
+The goal of this lab is to 
+* Review **assumptions** of ANOVA/t-tests/regression
+* Review diagnostics plots for normality and constant variance
+* Introduce diagnostics plots for outliers
+* Investigate the role of **transformation** on diagnostic plots
+* Introduce how to model curved (non-linear) data with x^2 terms
+* BONUS: material on R^2 for tomorrow's lecture occurs at the end
+
+**Source Data**
+
+Data on the relationship between the amount of pigment on lion snouts and their age from Whitman et al. (2004).  These data are featured in Chapter 17 of Whitlock & Shulter's _Analysis of Biological Data, 2nd ed_.
+
+The original data was presented in Figure 4, pg 2, of Whitman 
+
+**References:**
+Whitman, K, AM Starfield, HS Quadling and C Packer.  2004.  Sustainable trophy hunting of African lions.  Nature.
+
+
+
+
+## Preliminaries
+
+```{r}
+#The following sets up the data fro the analysis
+#Set working directory
+
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+**Load data**
+```{r}
+dat <- read.csv("lion_age_by_pop.csv")
+```
+
+
+
+# Plot Raw Data
+
+## Basic R plot
+```{r}
+plot(age.years ~ portion.black, 
+     data = dat)
+```
+
+
+## Change color w/ col = 
+```{r}
+plot(age.years ~ portion.black, 
+     data = dat,
+     col = 2)
+```
+
+<br><br><br><br>
+
+## Change symbol w/ pch = 
+```{r}
+plot(age.years ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2)
+```
+
+
+
+<br><br><br><br><br><br><br><br>
+
+# Fit basic regression model
+
+## Use raw data (no transformation)
+```{r}
+m1 <- lm(age.years ~ portion.black, data = dat)
+```
+
+<br><br><br><br>
+
+
+## Look at model w/summary
+
+```{r}
+summary(m1)
+```
+
+
+### Tasks: write equation, p value, and R2 for regression model
+
+Look at the model output and write down
+*___transformed model's "word" equation
+*___model's numeric equation
+*___p-value
+*___whether it is significant relative alpha = 0.05
+*___R2 (also written R^2)
+
+R2 can be thought of as 
+* How well the model fits the data
+* How much of the data the model explains
+
+
+<br><br><br><br>
+
+## Plot regrssion line on scatterplot with abline()
+
+
+```{r}
+#plot data
+plot(age.years ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2)
+
+#add regression line
+abline(m1,
+       lwd = 3)
+```
+
+
+<br><br><br><br><br><br>
+
+# Look at model diagnostics
+
+We look at model diagnostics and conduct "residual analysis" in order to understand if the assumptions of the regression model are being met.
+
+Model assumptions that can be investigated with model diagnostics are:
+* **Normality** (residuals should be normal)
+* **Constant variance** (variability of response variable y should not change for different values of the predictor variable x)
+
+Another key assumption is that data were sampled randomly; this however, **cannot be determined just by looking at model diagnostics.**
+
+Model diagnostics also allow us to determine 
+* if there are **outliers**
+* if outliers are having undo **influence** on the results of the model
+* data points with high **influence** are sometimes said to have high **leverage**
+
+<br><br><br><br><br><br>
+
+## Assess asumption of normality
+
+This can be investigated with
+* A histogram of the raw residuals
+* A "qqplot" (quantile-quantile plot)
+
+<br><br>
+
+### Plot histogram of residuals
+
+Get residuals with resid() function
+```{r}
+m1.resid <- resid(m1)
+```
+
+<br><br>
+Histogram of residuals with hist()
+```{r}
+hist(m1.resid)
+```
+
+Does this indicate normality of the residuals
+
+<br><br>
+
+### Plot qqplot
+
+R's plot() function can automatically make a qqplot if you give it the model from the lm() function and  tell it "which = "
+```{r}
+plot(m1, which = 2, 
+     main  = "plot(model, which =2)")
+```
+
+There is some indication of non-normality but it isn't horrible.  Could be better, could be a lot worse.
+
+
+<br><br><br><br>
+
+### Optional: Plot both diagnostics side by side
+
+We can look at these side by side w/the par() command
+```{r}
+#Set par()
+par(mfrow = c(1,2))
+
+#make histogram of residuals
+hist(m1.resid, main = "hist(residuals)")
+
+#make qqplot
+plot(m1, which = 2,
+     main  = "plot(model, which =2)")
+
+#re-set par()
+par(mfrow = c(1,1))
+```
+
+
+<br><br><br><br>
+
+
+## Assess asumption of Constant Variance
+
+Plot residuals of model against fitted values.  We can get fitted values with the fitted() function.  The plot() function cal also do this automatically if we tell it "which = 1""
+
+
+### Plot Residuals ~ Fitted
+```{r}
+plot(m1, 
+     which=1)
+```
+
+* The spread of the residuals (on the y axis) changes as the fitted values (x axis) increase. 
+* The variance is therefore **"not constant"** as the x-axis changes
+* This is a **major problem** and should cause more concern than non-normality
+
+<br><br><br><br>
+
+This can be better seen here
+```{r, echo=FALSE}
+#plot residuals
+plot(m1, 
+     which=1,
+     main = "plot(m1, which = 1)")
+
+arrows(x0 = 2,y0 = -1,
+       x1=9, y1 = -2.75,
+       col = 2, lwd = 2,length = 0.1)
+arrows(x0 = 2,y0 = 2.5,
+       x1=9, y1 = 5.25,
+       col = 2, lwd = 2,length = 0.1)
+```
+
+
+<br><br><br><br><br><br>
+
+## Investigate outliers of regression with raw data
+
+#### Plot raw data with the regression line
+```{r}
+#plot data
+plot(age.years ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2)
+
+#add regression line
+abline(m1,
+       lwd = 3)
+```
+
+
+<br><br><br><br>
+One of the data points falls rather far from the line
+```{r, echo=FALSE}
+plot(age.years ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2,
+     ylim = c(1,13.5))
+
+#add regression line
+abline(m1,
+       lwd = 3)
+
+arrows(x0 = 0.65,y0 = 13.1,
+       x1 = 0.72, y1 = 13.1, 
+       lwd = 5,
+       col = 3,
+       length = 0.1)
+```
+
+
+* This point _could_ qualify as an **outlier.**
+* Outliers are "extreme observations"
+* Outliers _can_ be due to mistakes while collecting or entering data
+* They can also occur just due to chance by observing and individuals at the further end of the population distribution
+* Outlier are therefore not necessarily "bad data"
+* They can make statistical analyses problematic
+
+Key idea
+* Potential outliers will have a large distance between them and the regression line
+* That is, they will have a large **residual**
+
+<br><br><br><br>
+
+### Plot residual of potential outlier
+```{r, echo=FALSE}
+plot(age.years ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2,
+     ylim = c(1,13.5))
+
+arrows(x0 = 0.65,y0 = 13.1,
+       x1 = 0.72, y1 = 13.1, 
+       lwd = 5,
+       col = 3,
+       length = 0.1)
+text(x = 0.64,13.25,labels = "Potential outlier",pos =2)
+
+
+#add regression line
+abline(m1,
+       lwd = 3)
+
+#plot residual
+i.max <- which.max(dat$age.years)
+
+x.obs <- dat$portion.black[i.max]
+y.hat <- predict(m1, newdata = dat[i.max,])
+y.obs <- dat$age.years[i.max]
+
+arrows(x0 = x.obs, y0 = y.hat,
+       x1 = x.obs, y1 = y.obs, 
+       lwd = 5,
+       col = 3,
+       length = 0.01,)
+
+text(x = 0.74,11,labels = "Residual of the outlier",pos =2)
+
+
+
+```
+
+
+<br><br><br><br>
+
+### Plot outlier diagnostics
+
+* Points with high **leverage** can have a large impact on regression results
+* If points with high **leverage** also have large residuals this can be problematic
+
+We can investigate this issue using plot()
+```{r}
+plot(m1, which = 5)
+
+inf <- influence.measures(m1)
+
+hat32 <- inf$infmat[32,"hat"]
+r32 <- rstandard(m1)[32]
+arrows(x0 = 0.125,x1 = c(hat32-0.015),
+       y0 = r32, y1 =r32)
+
+```
+
+* Points between the red lines labeled 0.5 are generally considered ok
+* Points between the 0.5 and 1 lines might be problematic
+* Points outside the red lines deserve careful consideration
+* The point marked "32", which is our point w/the largest residual, is near the red 1 line.
+
+
+<br><br><br><br><br><br>
+
+### Plot all diagnostics together
+
+If we set par() we can put all of the diagnostics together.
+
+```{r}
+par(mfrow = c(2,2))
+
+#plot histogram of residual
+hist(m1.resid)
+
+#plot qqplot
+plot(m1, which = 2)
+
+#Plot residual vs. fitted
+plot(m1, which = 1)
+
+#plot outlier diagnostics
+plot(m1, which = 5)
+
+#reset par
+par(mfrow = c(1,1))
+```
+
+
+<br><br><br><br><br><br>
+
+# Log transformation to meet model assumptions
+
+When data do not meet the assumption of linear regression
+* p-values will be inaccurate (usually too small)
+* Confidence intervals will be inaccurate (usually to narrow)
+
+Log transformations can help the data better match the assumptions of the model.
+
+The log transformation has several useful properties
+* It can improve normality
+* Reduce the spreading of point in residuals vs. fitted ("stabilize the variance") 
+* Reduce the impact of outliers
+* Log transformation will help assure that our p-vales and confidence intervals are accurate
+* A major drawback of the log transformation is that its hard to interpret the parameters in a transformed model (b/c we don't measure things on the log scale in nature and conceptualize the log scale easily in our head)
+
+
+<br><br><br><br>
+
+## Refit regression model w/ log transformation
+
+Fit model with log(age.years) inside of lm(...)
+```{r}
+m1.log <- lm( log(age.years) ~ portion.black, data = dat)
+```
+
+
+
+## Plot transformed data and model
+
+* If we want to plot the model against the data, we need to also transform what we plot.
+* The y-axis is now log(age.years) 
+
+```{r}
+plot( log(age.years) ~ portion.black, data = dat)
+abline(m1.log, col = 2, lwd = 2)
+```
+
+<br><br><br><br>
+
+## Look at summary of transformed data
+
+<br><br>
+
+```{r}
+summary(m1.log)
+```
+
+
+### Tasks: write equation, p value, and R2 for log transformed regression model
+
+Look at the transformed model output and write down
+* ___transformed model's "word" equation
+* ___transformed model's numeric equation
+* ___p-value
+* ___whether it is significant relative alpha = 0.05
+* ___R2 (also written R^2)
+
+How does p-value and R2 compare between m1 and m1.log?
+
+
+
+<br><br><br><br>
+
+
+## Look at model diagnostics for transformed model
+
+Let's see how the transformation impacts that model.
+
+### Assess asumption of normality for transformed model
+
+The original model (m1) had some signed of non-normality
+
+#### Plot histogram of residuals from logged model
+
+Get residuals with resid() function
+```{r}
+m1.log.resid <- resid(m1.log)
+```
+
+<br><br>
+Histogram of residuals with hist()
+```{r}
+hist(m1.log.resid)
+```
+
+Does this indicate normality of the residuals?
+
+<br><br><br><br>
+
+#### Plot qqplot for transformed data
+
+quantile-quantile plot
+```{r}
+plot(m1.log, which = 2)
+```
+
+
+<br><br><br><br>
+
+#### Optional: Plot both diagnostics side by side
+
+We can look at these side by side w/the par() command
+```{r}
+#Set par()
+par(mfrow = c(1,2))
+
+#make histogram of residuals
+hist(m1.log.resid)
+
+#make qqplot
+plot(m1.log, which = 2)
+
+#re-set par()
+par(mfrow = c(1,1))
+```
+
+
+<br><br><br><br>
+
+
+### Assess asumption of Constant Variance
+
+#### Plot Residuals ~ Fitted
+```{r}
+plot(m1.log, 
+     which=1)
+```
+
+There is no longer any obvious spread to this plot, but the residual do seem to go down, up, then back down...
+
+<br><br><br><br><br><br>
+
+
+
+
+
+
+
+
+
+### Investigate outliers in regression with logged data
+
+#### Plot raw data with the transformed regression line
+```{r}
+#plot data
+plot(log(age.years) ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2)
+
+#add regression line
+abline(m1.log,
+       lwd = 3)
+```
+
+
+<br><br><br><br>
+What has happened to the previous "outlier"
+```{r, echo=FALSE}
+plot(log(age.years) ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2)
+
+#add regression line for logged data
+abline(m1.log,
+       lwd = 3)
+
+arrows(x0 = 0.65,y0 = log(13.1),
+       x1 = 0.72, y1 = log(13.1), 
+       lwd = 5,
+       col = 3,
+       length = 0.1)
+```
+
+
+<br><br><br><br>
+
+#### Plot residual of former outlier
+```{r, echo=FALSE}
+plot( log(age.years) ~ portion.black, 
+     data = dat,
+     col = 2,
+     pch = 2)
+
+#add regression line
+abline(m1.log,
+       lwd = 3)
+
+#plot residual
+i.max <- which.max(dat$age.years)
+
+x.obs <- dat$portion.black[i.max]
+y.hat <- predict(m1.log, newdata = dat[i.max,])
+y.obs <- dat$age.years[i.max]
+
+arrows(x0 = x.obs,y0 = y.hat,
+       x1 = x.obs, y1 = log(y.obs), 
+       lwd = 5,
+       col = 3,
+       length = 0.01,)
+
+text(x = 0.65,log(11.5),labels = "Residual")
+
+
+
+```
+
+<br><br><br><br>
+
+#### Plot formal outlier diagnostics
+
+Recall
+* Points with high **leverage** can have a large impact on regression results
+* If points with high **leverage** also have large residuals this can be problematic
+
+We can investigate this issue using plot()
+```{r}
+plot(m1.log, which = 5)
+```
+
+Recall:
+* Points between the red lines labeled 0.5 are generally considered ok
+* Points between the 0.5 and 1 lines might be problematic
+* Points outside the red lines deserve careful consideration
+
+
+
+<br><br><br><br><br><br>
+
+#### Plot all diagnostics together
+
+If we set par() we can put all of the diagnostics together.
+
+```{r}
+par(mfrow = c(2,2))
+
+#1)plot histogram of residual
+m1.log.resid <- resid(m1.log)
+hist(m1.log.resid)
+
+#2)plot qqplot
+plot(m1.log, which = 2)
+
+#3)Plot residual vs. fitted
+plot(m1.log, which = 1)
+
+#4)plot outlier diagnostics
+plot(m1.log, which = 5)
+
+#reset par
+par(mfrow = c(1,1))
+```
+
+
+
+<br><br><br><br>
+
+# Non-linear data
+
+Raw data
+```{r}
+plot(age.years ~ portion.black, 
+     data = dat)
+```
+
+
+<br><br><br><br>
+
+## What if we drop that potential outlier?
+
+
+```{r}
+dat.nooutlier <- dat[-32,]
+plot(age.years ~ portion.black, 
+     data = dat.nooutlier)
+```
+
+<br><br><br><br>
+
+## Is there curvature to the data?
+
+* Add "smoother" w/scatter.smooth
+* Note that we can't use a "~" here, use comma instead
+* Also have to reverse order of terms (portion.black comes first)
+```{r}
+scatter.smooth(dat.nooutlier$portion.black, 
+               dat.nooutlier$age.years,
+               lpars = list(col = 2, lwd =2))
+```
+
+* Some curvature in the data
+* This indicates some "non-linearity"
+
+
+## Does log impact the curve?
+
+Not really 
+```{r}
+scatter.smooth(dat.nooutlier$portion.black, 
+               log(dat.nooutlier$age.years),  #log this line
+               lpars = list(col = 2, 
+                            lwd =2))
+```
+
+<br><br>
+
+## Fit regression model w/ "non-linear term"
+
+We can try to account for this curviness by including another parameter in our model.  This term is sometimes called
+* a "non-linear" term
+* or an "x^2"
+
+Its called an "x^2" term b/c we try to account for the curviness by modeling the x variable (portion.black) AND the x variable squared (portion.black^2)
+
+### Model w/ x^2 term
+
+**IMPORTANT**: Its annoying, but we have to put and "I(...)" around the x^2 term, like this I(portion.black^2)
+```{r}
+m2.x2 <- lm(age.years ~ portion.black +
+                 I(portion.black^2),  #Note the I!!!!
+     data = dat.nooutlier)
+```
+
+
+<br>
+
+#### Look at summary of modle with x^2 term
+
+```{r}
+summary(m2.x2)
+```
+
+The x^2 term (list as "I(portion.black^2)") is not significant.
+We'll explore what happens with including this term in the model
+
+#### Predictions from model with R^2 term
+
+
+Don't worry too much about how this code works
+```{r}
+
+#predictiosn
+m2.x2preds <- fitted(m2.x2)
+
+
+plot(m2.x2preds ~ dat.nooutlier$age.years)
+
+#add predictions to dataframe
+dat.nooutlier$m2.x2preds <- m2.x2preds
+
+
+#plot RAW data with smoother
+scatter.smooth(dat.nooutlier$portion.black, 
+               dat.nooutlier$age.years,  #log this line
+               lpars = list(col = 2, 
+                            lwd =2))
+
+# ADD line of the non-linear model with x^2
+i <- order(dat.nooutlier$portion.black)
+points(m2.x2preds ~ portion.black, dat.nooutlier[i,], type = "l", col = 3, lwd = 2, lty = 2)
+legend("topleft", legend = c("smoother","x^2 model"),col = c(2:3), lty = c(1:2), cex = 0.8)
+
+```
+
+
+
+
+<br><br><br><br><br>
+
+
+# Investigate R^2
+
+* R^2 indicates how well the model fits the data
+* The higher R^2, the more the model can explain variation in the data
+* Models can have low p-values ("highly significant") yet not have high R^2 (therefore they don't explain much of what is going on in the data)
+
+
+## Plot raw data
+```{r}
+plot(age.years ~ portion.black, 
+     data = dat)
+abline(m1)
+R2 <- round(summary(m1)$adj.r.squared,2)
+R2 <- paste("R^2 = ",R2)
+legend("topleft", legend =  R2)
+```
+
+
+<br><br><br><br>
+
+## Plot more variable data
+```{r}
+n <- dim(dat)[1]
+
+#Plot raw data
+plot(age.years ~ portion.black, 
+     data = dat, ylim = c(0,14))
+abline(m1)
+x.obs <- dat$portion.black
+y.preds <- predict(m1)
+y.obs <- dat$age.years
+
+y.noise.worse <- ifelse(y.obs > y.preds, c(y.obs+0.5), 
+                  c(y.obs-0.5))
+
+#model noise
+m1.noise.worse <- lm(y.noise.worse ~ x.obs)
+
+#plot noise
+points(y.noise.worse ~ x.obs, 
+     data = dat, col = 2)
+
+R2.obs <- round(summary(m1)$adj.r.squared,2)
+R2.obs <- paste("R^2 orig = ",R2.obs)
+
+R2.worse <- round(summary(m1.noise.worse)$adj.r.squared,2)
+R2.worse <- paste("R^2 = ",R2.worse)
+
+
+legend("topleft", legend =  c(R2.obs,R2.worse), col = c(1,2),
+       pch = 1)
+```
+
+
+
+
+## Plot less variable data
+```{r}
+n <- dim(dat)[1]
+
+#Plot raw data
+plot(age.years ~ portion.black, 
+     data = dat, ylim = c(0,14))
+abline(m1)
+x.obs <- dat$portion.black
+y.preds <- predict(m1)
+y.obs <- dat$age.years
+
+y.noise.better <- ifelse(y.obs > y.preds, c(y.obs-0.5), 
+                  c(y.obs+0.5))
+
+#model noise
+m1.noise.better <- lm(y.noise.better ~ x.obs)
+
+#plot noise
+points(y.noise.better ~ x.obs, 
+     data = dat, col = 2)
+
+R2.obs <- round(summary(m1)$adj.r.squared,2)
+R2.obs <- paste("R^2 = ",R2.obs)
+
+R2.better <- round(summary(m1.noise.better)$adj.r.squared,2)
+R2.better <- paste("R^2 = ",R2.better)
+
+
+legend("topleft", legend =  c(R2.obs,R2.better), col = c(1,2),
+       pch = 1)
+```
+
+
+
+<br><br>
+
+## Plot perfect data
+```{r}
+n <- dim(dat)[1]
+
+#Plot raw data
+plot(age.years ~ portion.black, 
+     data = dat, ylim = c(0,14))
+abline(m1)
+x.obs <- dat$portion.black
+y.preds <- predict(m1)
+y.obs <- dat$age.years
+
+y.perfect <- y.preds
+
+#model noise
+m1.perfect <- lm(y.perfect ~ x.obs)
+
+#plot noise
+points(y.perfect ~ x.obs, 
+     data = dat, col = 2)
+
+R2.obs <- round(summary(m1)$adj.r.squared,2)
+R2.obs <- paste("R^2 = ",R2.obs)
+
+R2.perfect <- round(summary(m1.perfect)$adj.r.squared,2)
+R2.perfect <- paste("R^2 = ",R2.perfect)
+
+
+legend("topleft", legend =  c(R2.obs,R2.perfect), col = c(1,2),
+       pch = 1)
+```
+
+
+

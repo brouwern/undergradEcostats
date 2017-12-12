@@ -1,0 +1,445 @@
+---
+title: "Independent Project: Sample Paper Using Lion Data"
+author: "brouwern@gmail.com"
+date: "December 5, 2016"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+  word_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = TRUE)
+
+```
+
+# Sample Paper Using Lion data
+
+An example of how to format analyses and plots for a scientific paper, using data on the relationship between the amount of pigment on lion snouts and their age from Whitman et al (2004).  These data are featured in Chapter 17 of Whitlock & Shulter's _Analysis of Biological Data, 2nd ed_.
+
+The original data was presented in Figure 4, pg 2, of Whitman 
+
+**References:**
+Whitman, K, AM Starfield, HS Quadling and C Packer.  2004.  Sustainable trophy hunting of African lions.  Nature.
+
+
+
+
+# Preliminaries
+
+
+```{r}
+#The following sets up the data fro the analysis
+#Set working directory
+
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+Load data
+```{r}
+dat <- read.csv("lion_age_by_pop.csv")
+```
+
+# Content of a scientific paper
+
+<br>
+
+
+## Does the relationship between nose pigmentation and age vary between different populations of African lion (_Panthera leo_)?
+
+## ABSTRACT
+
+For information on the format of "Structured abstracts", see
+https://www.nlm.nih.gov/bsd/policy/structured_abstracts.html
+
+**INTRODUCTION**: Being able to accurately understand the age structure of population
+
+**OBJECTIVES**: The primary of objective of this study was to determine if the age of lions can be predicted from the amount of pigementation on their noses, and whether this relationship varies between populations.
+
+**METHODS**:(3-4 sentences on methods; likely to be longest or 2nd longest part of abstract)
+
+**RESULTS**:(2-5 sentences on results; likely to be longest or 2nd longest part of abstract)
+
+**CONCLUSION**(2-3 sentences stating the biological/ecological/scientific conclusions that can be drawn from the study).
+
+<br>
+<br>
+
+## INTRODUCTION
+
+* Please include 3 to 4 citations from **peer reviewed journal articles** here.
+* (There needs to be 4 references in the papers; at least 3 have to be in the introduction)
+* References should be properly formatted, ie "Brouwer et al (2015)."
+* Use your introductory material from the previous assignment
+* Please end your intro with a sentence or two stating what the overall goal/hypothesis /question of the study is.
+* Please update your intro based on the suggestions
+* I do not expect you to write a perfect introduction, but I expect to see improvement from your first draft
+
+<br>
+<br>
+
+## METHODS
+
+### _Study species_
+* If you study is focused on a particular species include a few sentences about its basic biology in case your reader is not an expert on that species.
+* All statements of fact should be cited
+* ie, "The African lion (_Panthera leo_) is the largest carnivore in the world and can live to ages of ... (citation).  While endangered in much of its range, trophy hunting is legal in parts of Africa (cite) ...""
+
+<br>
+<br>
+
+### _Study site_
+* If your study occurred at a particular location that someone would have to re-visit if they wanted to replicate or follow up on your, provide information about where it is located (State, County, etc) and what the physical conditions are like.
+* ie, "This study was conduct on the Serengeti of Tanzania and the Ngorogoro crater.  The Serengeti is ... (cite).  Ngorogoro crater is ... (cite)."
+
+## _Field/Lab methods_
+* How data was collected
+
+## _Statistical methods_
+I tested whether there was a significant relationship between nose pigmentation and lion age using linear regression.  To determine if this relationship varied between lion populations I tested for an effect of population and a  pigmentation*population interaction.  Data were logged transformed to meet the assumptions of linear regression.  All analyses were carried out in R 3.3.1 (R Core Team 2016).
+
+<br>
+<br>
+
+## RESULTS
+
+### _Descriptive statistics_
+
+
+```{r DESCRIPTIVE STATS, include=FALSE}
+# Summary stats
+dim(dat)
+summary(dat)
+
+lion.means <- tapply(dat$age.years,
+      dat$population,
+      FUN = mean)
+
+lion.sd <- tapply(dat$age.years,
+      dat$population,
+      FUN = sd)
+
+lion.n <- tapply(dat$age.years,
+      dat$population,
+      FUN = length)
+
+lion.se <- lion.sd/sqrt(lion.n)
+
+#Load plot_means function
+## NOTE: this ONLY works if you have the function saved in a seperate .R file in the current working directory
+source("plot_means_raw_code.R")
+
+
+```
+
+* You should start you results with a few sentences about the general characteristics of the data you collected
+
+Data on nose pigmentation and age was collected for 32 lions; 22 lions were from the Serengeti population and 10 from Ngorogoro.  (Raw data are available in Table A1 in Appendix 1).  The mean age of lions in The Serengeti sample population was 3 years (SE = 0.3; Figure 1) and the mean in the Ngorogoro sample was 7.13 (SE = 0.85).   The distribution of ages for each population is shown in Figure A1.
+
+<br>
+
+### _Statistical results_
+
+```{r, Fitting models raw data, include=F}
+#Fit models
+
+##Null model
+m.null <- lm(age.years ~ 1, data = dat)
+
+##Alt model 1: age varies w/ portion black
+m.alt.1 <- lm(age.years ~ portion.black, data = dat)
+
+##Alt model 2: age varies w/ portion black, w/ effect of population on intercept only
+
+m.alt.2.intercept <- lm(age.years ~ portion.black + population, data = dat)
+
+
+##Alt model 3: age varies w/ portion black, and the relationship depends on the population (slopes vary)
+
+###Raw data
+m.alt.3.interaction <- lm(age.years ~ portion.black*population, data = dat)
+```
+
+
+```{r, Fitting models logged data, include = F}
+#Fit models
+
+##Null model
+### logged data
+m.null.logged <- lm(log(age.years) ~ 1, data = dat)
+
+##Alt model 1: age varies w/ portion black
+### logged data
+m.alt.1logged <- lm(log(age.years) ~ portion.black, data = dat)
+
+##Alt model 2: age varies w/ portion black, w/ effect of population on intercept only
+### logged data
+m.alt.2.int.logged <- lm(log(age.years) ~ portion.black + population, data = dat)
+
+
+##Alt model 3: age varies w/ portion black, and the relationship depends on the population (slopes vary)
+###Logged data
+m.alt.3.intxn.logged <- lm(log(age.years) ~ portion.black*population, data = dat)
+```
+
+```{r Test models raw data, include=FALSE}
+#Test models
+
+##Test null vs. 1st alternative
+##(no relation vs. age varies with portion.black)
+### Raw data (not transformed)
+anova(m.null,
+      m.alt.1)
+
+##Test 1st alternative vs. 2nd alternative
+##(populations have same intercept vs. different intercepts)
+anova(m.alt.1,
+      m.alt.2.intercept)
+
+##Test 2nd alternative vs. 3rd alternative
+##(populations have same intercept vs. pops have differnt intercepts AND different slopes)
+anova(m.alt.2.intercept,
+      m.alt.3.interaction)
+```
+
+
+```{r Test models logged data, include=FALSE}
+#Test models of transformed data
+
+##Test null vs. 1st alternative
+##(no relation vs. age varies with portion.black)
+### logged data
+anova(m.null.logged,
+      m.alt.1logged)
+
+
+##Test 1st alternative vs. 2nd alternative
+##(populations have same intercept vs. different intercepts)
+###Logged data
+anova(m.alt.1logged,
+      m.alt.2.int.logged)
+
+
+## Test 2nd alternative vs. 3rd alternative
+## (populations have same intercept vs. pops have differnt intercepts AND different slopes)
+### Logged data
+anova(m.alt.2.int.logged,
+      m.alt.3.intxn.logged)
+
+```
+
+
+```{r, include=FALSE}
+#Summary of best model
+summary(m.alt.2.int.logged)
+```
+
+There was a significant positive relationship between nose pigmentation and lion age (F = 44.364, p < 0.0001).  The Serengeti and Ngorogoro populations had different intercepts (F = 23.17, p < 0.0001) but there was no evidence of a significant population by pigmentation interaction (F = 0.72, p = 0.40).  The best fitting model therefore had separate intercepts for each population but a single slope (Figure 2; slope = 1.74, SE = 0.29).
+
+<br>
+<br>
+
+## DISCUSSION
+
+* A discussion section is optional
+* Up to 5 points will be given as extra credit for a reasonably well-written discussion.  The discussion should include references
+
+<br>
+<br>
+
+## ACKNOWLEDGEMETNS
+
+* Recognize anyone who helped you on the project, such as professor who you consulted with on the project, roommates who helped you collect data, or classmates who helped you with stats or code.
+
+<br>
+<br>
+
+## REFERENCES
+
+* You should have 4 references from peer reviewed journals
+* Your 5th reference should be for R, as shown below.
+
+R Core Team (2016). R: A language and environment for statistical computing. R Foundation for
+Statistical Computing, Vienna, Austria. https://www.R-project.org/.
+
+<br>
+<br>
+
+## FIGURES
+
+**Figure 1:** Mean ages in the two samples of lions.  Error bars are approximate 95% confidence intervals.
+
+```{r, echo=FALSE}
+plot.means(means = lion.means,SEs = lion.se,
+           categories = c("Ngorogoro crater", "Serengeti"),x.axis.label = "Population",y.axis.label = "Known lion Age")
+```
+
+<br>
+
+**Figure 2:** Relationship between nose pigmentation and age of male African lions (_Leo panthera_) in the Serengeti (n=22) and Ngorogoro populations (n = 10), Tanzania.
+
+```{r, echo=FALSE}
+#Subset data
+serengetti <- subset(dat,population == "Serengeti")
+
+ngorogoro <- subset(dat,population == "Ngorogoro")
+
+#Get predictions from model to plot lines
+serengetti$age.predictions <- predict(m.alt.2.intercept, newdata = serengetti)
+
+ngorogoro$age.predictions <-predict(m.alt.2.intercept, newdata = ngorogoro)
+
+#plot data subset
+## plot serengetti data
+# "col = " sets the color of the points
+# "pch ="  sets the shape of the points
+# "ylim = " adjusts the x axis
+# "ylim ="  adjust the y axis
+# "par(mfrow = c(1,1))" resets plot so that only 1 panel is shown
+# points() adds an extra set of points after an itial plot is made
+# legend(...) add the legend
+
+par(mfrow = c(1,1), mar = c(4,4,1,2))
+plot(age.years ~ portion.black, data = serengetti, col = 1, pch = 1,
+     xlim = c(0.1,0.8),
+     ylim = c(1,14),
+     lwd = 2,
+     xlab = "Portion of nose black",
+     ylab = "Known lion age")
+points(age.years ~ portion.black, data = ngorogoro, col = 2, pch = 2, lwd = 2)
+legend("topleft", #where in plot to locate plot
+       legend = c("Serengetti", #Words
+                  "Ngorogoro"),
+       col = c(1,2),
+       pch = c(1,2))
+points(age.predictions ~ portion.black, 
+       data = serengetti, 
+       type = "l", lwd = 3)
+points(age.predictions ~ portion.black,
+       data = ngorogoro, 
+       type = "l",
+       col = 2,
+       lty = 2)
+```
+
+<br>
+<br>
+
+## APPENDIX 1: Raw data table
+
+**Table A1:** Raw data from 32 African lions (_Panthera leo_) from Tanzania.  Originally published ... [add reference]
+
+[Add table]
+
+<br>
+<br>
+
+## APPENDIX 2: Raw data plots
+
+**Table A2:** Distribution of ages in the samples used for regression analysis.
+```{r, include=FALSE}
+boxplot(age.years ~ population, data = dat,
+        xlab = "Portion of nose with black pigment",
+        ylab = "Known lion age",
+        col = c(2,3))
+```
+
+
+<br>
+<br>
+
+## APPENDIX 3: Model diagnostics
+
+**Table A1-1: Diagnostic plots for un-tranformed data**
+
+```{r, include=FALSE}
+residuals.raw.data <- resid(m.alt.3.interaction)
+```
+
+```{r, echo=FALSE}
+#set plot window for a 2 x 2 grid
+par(mfrow = c(2,2), mar = c(2,4,2,1))
+
+#make diagnostic plots
+hist(residuals.raw.data)
+plot(m.alt.3.interaction,which = c(1))
+plot(m.alt.3.interaction,which = c(2))
+plot(m.alt.3.interaction,which = c(5))
+```
+
+<br>
+<br>
+<br>
+
+**Table A1-2: Diagnostic plots for log-tranformed data**
+
+```{r, include=FALSE}
+residuals.log.data <- resid(m.alt.3.intxn.logged )
+
+```
+
+
+```{r, echo=FALSE}
+par(mfrow = c(2,2), mar = c(2,4,2,1))
+hist(residuals.raw.data)
+plot(m.alt.3.intxn.logged,which = c(1))
+plot(m.alt.3.intxn.logged,which = c(2))
+plot(m.alt.3.intxn.logged,which = c(5))
+```
+
+<br>
+<br>
+<br>
+
+---
+title: "Untitled"
+author: "brouwern@gmail.com"
+date: "December 7, 2016"
+output: html_document
+---
+
+```{r  include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Notes
+
+## Title Notes
+* Species names should be italicized in titles and abstracts
+
+## Abstract
+
+* Abstracts almost never have citations and never have quotes from authors.
+* Don't say you transformed that data in abstract, just the methods
+
+## Introduction
+
+## Methods
+
+### Statistical methods
+
+* In your methods need to include a statement like this.
+"All analyses were carried out in R 3.3.1 (R Core Team 2016)."
+
+In your references include:
+
+R Core Team (2016). R: A language and environment for statistical computing. R Foundation for
+Statistical Computing, Vienna, Austria. https://www.R-project.org/.
+
+
+* This should be your 5th (or greater) reference. * You should have 4 other references from peer-reviewed scientific papers.
+
+* Unless you use a very special package or technique you do not need to mention the function or code you used.  
+* That is, you DO NOT need to say "I used the t.test function", or "I used the plot2means function."
+
+### Results
+
+* If you transformed that data, just report those results (ie F values and P values)
+
+
+

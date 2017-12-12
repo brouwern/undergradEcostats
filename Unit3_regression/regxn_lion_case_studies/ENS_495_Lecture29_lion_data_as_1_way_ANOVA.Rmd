@@ -1,0 +1,249 @@
+---
+title: "Lecture 29: Reporting results of 1-way ANOVA for your independent project"
+author: "brouwern@gmail.com"
+date: "December 9, 2016"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lion data set as 1-way ANOVA
+
+
+```{r}
+#The following sets up the data fro the analysis
+#Set working directory
+
+setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/last_week")
+```
+
+Load data
+```{r}
+dat <- read.csv("lion_age_by_pop_and_sex.csv")
+```
+
+
+
+
+## Lion data
+```{r}
+pigment.fivenum <- fivenum(dat$portion.black)
+
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 3 groups",
+     ylim = c(0,19))
+```
+
+
+## Split lion data by groups
+```{r}
+pigment.fivenum <- fivenum(dat$portion.black)
+plot(age.years ~ portion.black, data = dat,
+     main = "Lion pigment data split into 3 groups",
+     ylim = c(0,19))
+abline(v = pigment.fivenum[2], col = 2, lwd = 3)
+abline(v = pigment.fivenum[4], col = 2, lwd = 3)
+text(x = 0.125, y = 17, "Low\npigment", cex =1.1)
+text(x = 0.5, y = 17, "Mod.\npigment", cex = 1.1)
+text(x = 0.895, y = 17, "High\npigment", cex = 1.1)
+```
+
+
+<br>
+
+## Create 3 pigment groups
+```{r}
+pigment.fivenum <- fivenum(dat$portion.black)
+
+dat$pigment.groups.3 <- "mod.pigment"
+
+dat$pigment.groups.3[which(dat$portion.black <= pigment.fivenum[[2]])] <- "low.pigment"
+
+dat$pigment.groups.3[which(dat$portion.black > pigment.fivenum[[4]])] <- "high.pigment"
+
+
+dat$pigment.groups.3 <- factor(dat$pigment.groups.3)
+summary(dat)
+
+
+                               
+dat$pigment.groups.3 <- factor(dat$pigment.groups.3,
+                               levels =c("low.pigment",
+                                          "mod.pigment",
+                                          "high.pigment"))
+
+
+table(dat$pigment.groups.3, dat$population)    
+table(dat$pigment.groups.3, dat$sex)
+
+
+```
+
+**NOTE:** Splitting up a continuous variable like this into a categorical variable and doing an ANOVA is generally a BAD idea. Regression is the proper way to analyze the raw data.  I am making these groups for illustration purposes only!
+
+<br>
+
+## Plot raw data by group
+
+
+```{r}
+par(mfrow = c(1,1))
+plot(age.years ~ pigment.groups.3,data = dat,
+     xlab = "Pigmentation group",
+     ylab = "Known Lion Age")
+```
+
+**Figure 1:** Box plots of lion ages in three pigmentation groups from the Serengeti and Ngorogoro Crater, Tanzania, east Africa.
+
+<br><br><br>
+
+## Plot means
+
+
+```{r}
+library(sciplot)
+
+
+ci.fun. <- function(x) c(mean(x)-2*se(x), mean(x)+3*se(x))
+lineplot.CI(x.factor = pigment.groups.3,
+            response = age.years,
+            data = dat,
+            ci.fun = ci.fun.
+              )
+```
+
+**Figure 2:** Mean age of lions in three pigmentation groups from the Serengeti and Ngorogoro crater, Tanzania, east Africa.  Error bars are approximate 95% confidence intervals.
+
+<br><br>
+
+## 1-way ANOVA
+
+(again, don't do an analysis like this - use the original data and do an ANOVA!)
+
+### Null model: age.years ~ 1
+
+Age does not vary with pigmentation
+```{r}
+m.null <- lm(age.years ~ 1 ,data = dat)
+```
+
+<br>
+
+### Alternative model: age.years ~ pigment.groups.3
+Age *does*  vary with pigmentation
+```{r}
+m.alt <- lm(age.years ~ pigment.groups.3,data = dat)
+```
+
+
+<br><br>
+
+### Omnibus ANOVA F-test
+
+```{r}
+anova(m.null, m.alt)
+```
+
+<br><br>
+
+### Writing up result of Omnibus F-test
+
+*Summarize reulst of ANOVA in a single sentence:*
+"There was a significant difference in the mean ages of the three different pigmentation groups (F = 106.67, p < 0.00001, DF = 92,90)"
+
+<br><br>
+
+## Comparisons using Tukey-HSD
+
+### Refit m.alt w/ aov()
+
+```{r}
+
+dat$pigment.groups.3.rename <- gsub("pigment","",dat$pigment.groups.3)
+
+m.alt.aov <- aov(age.years ~ pigment.groups.3.rename,data = dat)
+```
+
+<br><br>
+
+### Pairwise comparison w/TukeyHSD()
+
+Run TukeyHSD()
+```{r}
+my.tukey <- TukeyHSD(m.alt.aov)
+```
+
+<br><br>
+
+### Look at Tukey output
+This lists the effect sizes (differences), their p-values and confidence intervals.
+
+```{r}
+my.tukey
+```
+
+### Plot Tukey HSD
+
+Plot the effect sizes calculated by TurkeyHSD
+```{r}
+source("plot_tukey_HSD_code.R")
+
+plotTukeysHSD(my.tukey,x.axis.label = "")
+abline(h =0, col =2)
+```
+
+**Plot 3:** Difference between mean lion ages (effect sizes) for three pigmentation groups calculated using Tukey's HSD.
+
+
+<br><br>
+
+### Compare Means of raw data to plot of Tukey
+
+```{r}
+par(mfrow = c(1,2))
+
+lineplot.CI(x.factor = pigment.groups.3,
+            response = age.years,
+            data = dat,
+            ci.fun = ci.fun.,
+              main = "means of raw data")
+
+plotTukeysHSD(my.tukey,x.axis.label = "")
+abline(h = 0, col =2)
+```
+
+
+<br><br><br><br>
+## WRite results from Tukey
+
+
+```{r}
+my.tukey
+```
+
+The results could be written out like this:
+"Tukey's HSD indicated that all means were different from each other.  The difference between the low and moderate pigment groups was 2.7 years (p < 0.0001), the difference between the moderate and high groups was 4.9 years (p< 0.0001), and the difference between the low and high groups was 7.7 years (p < 0.0001)"
+
+Note 1: Th difference between the low and high group would normally be left out, since if low vs mod and mod vs high are different, then low vs high would also be different.
+
+Note 2: For a real publication I'd probably include the confidence intervals around each difference, but you guys have enough to worry about already.
+
+
+
+## Residual analysis for ANOVA
+
+
+```{r}
+par(mfrow  =c(2,2))
+hist(resid(m.alt))
+plot(m.alt, which = 2)
+plot(m.alt, which = 1)
+plot(m.alt, which = 5)
+
+```
+
+

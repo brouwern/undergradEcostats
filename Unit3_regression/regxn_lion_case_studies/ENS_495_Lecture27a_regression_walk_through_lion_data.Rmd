@@ -1,0 +1,378 @@
+---
+title: "Lecture 27a: regression walkthrough with lion data"
+author: "brouwern@gmail.com"
+date: "November 30, 2016"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(arm)
+```
+
+NOTE: Any changes to this document will be announced via the class Facebook page ([CalU EcoStats](https://www.facebook.com/groups/930301587096169/)) and via email.
+
+# Lion data Table 17.1-1, pg 542
+
+```{r Plot Lion Data, echo=FALSE}
+
+rm(list = ls())
+
+
+# Load data
+ setwd("C:/Users/lisanjie2/Desktop/TEACHING/1_STATS_CalU/1_STAT_CalU_2016_by_NLB/Lecture/Unit3_regression/reg3_regression_other_week_after_thanksgiving")
+lions <- read.csv("lion_age.csv")
+
+
+plot(age.years ~ portion.black, data = lions,
+     ylab = "True Lion Age",
+     xlab = "Porition of Nose Black",
+     pch = 18,
+     cex =2,
+     xlim = c(0, 0.80),
+     ylim = c(0,14),
+     main = "Lion age ~ Nose blackness")
+
+```
+
+<br>
+
+```{r Funtion to plot lion data, include=FALSE}
+#Function to plot data
+make.lion.plot <- function(ylab. = "True Lion Age",
+                           xlab. = "Portion of Nose Black",
+                           main. = "Lion age ~ Nose blackness") {
+
+  plot(age.years ~ portion.black, data = lions,
+     ylab = ylab.,
+     xlab = xlab.,
+     pch = 18,
+     cex =2,
+     xlim = c(0, 0.80),
+     ylim = c(0,14),
+     main = main.)}
+```
+
+<br>
+
+## Regression of Lion Data
+
+Fit Regression models
+```{r}
+
+## Null model: no relationship between how black nose is and true age
+lion.null <- lm(age.years ~ 1,   # What does "~ 1 " tell R?
+               data = lions)
+
+
+## ALt model: Age can be predicted by portion of nose that is black
+lion.alt <- lm(age.years ~ portion.black, 
+               data = lions)
+```
+
+<br><br>
+
+## Visualize the hypotheses posed by the models
+
+Can you draw the hypotheses?
+```{r, echo = F}
+#set plotting window
+par(mfrow = c(1,2),mar = c(4,4,3,1))
+
+make.lion.plot(main. =  "Null: Lion age ~ 1")
+
+make.lion.plot(main. =  "Alt: Lion age ~  black",
+               ylab. = "")
+
+```
+
+<br><br>
+
+```{r, echo = F}
+par(mfrow = c(1,2),mar = c(4,4,3,1))
+
+make.lion.plot(main. =  "Null: Lion age ~ 1")
+abline(lm(lion.null), lwd = 5, lty = 2, col = 2)
+
+
+make.lion.plot(main. =  "Alt: Lion age ~  black",
+               ylab. = "")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+```
+
+<br><br><br>
+
+
+
+## Regression Model Output
+
+### Standard way of getting output with summary() command
+```{r, echo = F}
+
+summary(lion.alt)
+
+```
+
+This gives a lot of somewhat cluttered output
+
+<br><br><br>
+
+### Just look at regression coefficients
+
+```{r Shortened output, echo=FALSE}
+
+round(summary(lion.alt)$coefficients,3)
+
+```
+
+<br>
+
+### Questions you should be able to answer:
+* Why is one of the p-values equal to zero?
+* Which one is the slope of the line?
+* What is the biological meaning of a non-significant intercept?
+
+
+## The regression model tells us the equation of the  line
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+make.lion.plot(main. =  "Alt: Lion age ~  black",
+               ylab. = "")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+```
+
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black",
+               ylab. = "")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = intercept + slope*blackness",pos = 4)
+
+
+```
+
+<br>
+
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black",
+               ylab. = "")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = intercept + slope*blackness",pos = 4)
+
+text(x = 0, y=11,labels = "age = 0.93        + 10.58*blackness",pos = 4)
+```
+
+
+## Predictions from a model
+
+* Say we take a picture of a lion and determine that the portion of its nose that is black is 0.65 (65%)
+
+* What is the _predicted_ age of the lion
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = 0.93+ 10.58*blackness",pos = 4)
+arrows(x0=0.65, x1 = 0.65,
+         y1 = -0.29,y0 = 2,col = 2, lwd = 4,length = 0.1)
+```
+
+Points along the regression lines can be thought of as predictions for each value of x if we found a new lion with the value of x.
+
+
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = 0.93+ 10.58*blackness",pos = 4)
+abline(v = 0.65, col = 2, lwd = 3)
+```
+
+
+<br>
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = 0.93+ 10.58*(0.65)",pos = 4)
+abline(v = 0.65, col = 2, lwd = 3)
+```
+
+
+<br>
+
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = 0.93+ 10.58*(0.65)",pos = 4)
+text(x = 0, y=11,labels = "age = 7.8 years",pos = 4)
+abline(v = 0.65, col = 2, lwd = 3)
+```
+
+
+<br><br>
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+coef(lion.alt)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = 0.93+ 10.58*(0.65)",pos = 4)
+text(x = 0, y=11,labels = "age = 7.8 years",pos = 4)
+abline(v = 0.65, col = 2, lwd = 3)
+abline(h = 7.8, col = 2, lwd = 3)
+```
+
+
+## Getting predictions in R
+
+* Uses predict() function
+* I have written a function called easy.predict() to help with this
+
+```{r,echo F}
+easy.predict <- function(model,datum){
+  x.var.name <- names(model$coefficients)[[2]]
+new.df <- data.frame(datum)
+names(new.df) <- x.var.name
+
+  predict(model, newdata = new.df)[[1]]
+}
+```
+
+
+## Get prediction for portion black = 0.65
+```{r}
+
+easy.predict(lion.alt, datum = 0.65)
+
+```
+
+
+
+<br><br>
+
+
+## Plot the prediciton 
+
+
+```{r, echo = F}
+par(mfrow = c(1,1),mar = c(4,4,3,1))
+
+pred.out <- easy.predict(lion.alt, datum = 0.65)
+
+make.lion.plot(main. =  "Alt: Lion age ~  black")
+abline(lm(lion.alt), lwd = 5, lty = 2, col = 2)
+text(x = 0, y=13,labels = "age = 0.93+ 10.58*(0.65)",pos = 4)
+text(x = 0, y=11,labels = "age = 7.8 years",pos = 4)
+points(x = 0.65,y = pred.out, lwd = 15, col = 3)
+
+```
+
+
+<br><br><br>
+
+## Is regression appropriate for these data
+
+Do we violate the **assumptions** of the regression model?
+
+## Regression assumptions
+
+Shorthand versions
+(You MUST know these from memory)
+* 1)Random sampling
+* 2)Variability around regression line is approximately normal
+* 3)Variance in y does not change as x-changes
+
+<br><br>
+
+## Checking Assumption: Model diagnostics
+
+* This can be thought of as "Analysis of the residuals"
+* residuals = (real data) - (predictions from model)
+
+You get the residuals in R with the resid() command
+```{r}
+
+#Get the residuals
+model.residuals <- resid(lion.alt)
+
+#Look at first 12
+model.residuals[1:12]
+```
+
+Note that they can be both positive AND negative.  Why is that?
+
+<br>
+
+### Assumption 1: random sampling
+
+Frequently violated, especially with regression...
+
+<br><br><br>
+
+### Assumption 2: normality
+#### The most basic model diagnostic: are residuals normal-ish distributed
+
+use the hist() command
+```{r}
+
+hist(model.residuals)
+
+```
+
+* Kinda look skewed... 
+* ...but not horrible
+* Normality is NOT a particularly important assumption
+
+### Assumption 2: Normality
+#### Better look at normality: qqplot in R
+
+"qq" = "quantile quantile"
+```{r}
+
+plot(lion.alt, which = 2)
+
+```
+
+<br><br>
+
+### 3: Constant variance
+```{r}
+
+plot(lion.alt, which = 1)
+
+```
+
+
